@@ -5,9 +5,14 @@ edition = "2024"
 authors = ["Nikolas Yanek-Chrones research@icarai.io"]
 description = "A Rust crate for configuring and using OpenAI in an agentic system"
 license = "MIT"
-repository = "https://github.com/yourusername/openai_agent"
+repository = "https://github.com/nikothomas/agio"
+homepage = "https://github.com/nikothomas/agio"
 keywords = ["openai", "ai", "agent", "llm", "gpt"]
 categories = ["api-bindings", "asynchronous"]
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+]
 
 [dependencies]
 # HTTP client
@@ -39,7 +44,7 @@ url = "2.5.4"
 http = "1.2.0"
 rustls = { version = "0.23.23", features = ["ring"] }
 rand = "0.9.0"
-base64 = "0.21.7"
+base64 = "0.22.1"
 
 [dev-dependencies]
 # Testing
