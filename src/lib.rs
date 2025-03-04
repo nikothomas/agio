@@ -38,10 +38,8 @@ mod utils;
 mod tools;
 pub mod websocket_client;
 
-// Persistence and server modules (feature-gated)
-#[cfg(feature = "memory")]
+// Persistence and server modules
 pub mod persistence;
-#[cfg(feature = "memory")]
 pub mod server;
 
 // Public exports for the prelude
@@ -56,14 +54,11 @@ pub mod prelude {
     pub use crate::error::OpenAIAgentError as Error;
     pub use crate::tools::{ToolRegistry, RegisteredTool};
     
-    // Re-export persistence types when the memory feature is enabled
-    #[cfg(feature = "memory")]
+    // Re-export persistence types
     pub use crate::persistence::{PersistenceStore, EntityId, ConversationMetadata, MemoryStore};
-    #[cfg(all(feature = "memory", feature = "postgres"))]
-    pub use crate::persistence::PostgresStore;
+    pub use crate::persistence::postgres::PostgresStore;
     
-    // Re-export server types when the memory feature is enabled
-    #[cfg(feature = "memory")]
+    // Re-export server types
     pub use crate::server::AgentManager;
 }
 
@@ -80,12 +75,9 @@ pub use crate::tools::FunctionTool;
 // but should not be directly constructed by users
 pub use agent::AgentState;
 
-// Explicitly re-export persistence and server modules when memory feature is enabled
-#[cfg(feature = "memory")]
+// Explicitly re-export persistence and server modules
 pub use persistence::{PersistenceStore, EntityId, ConversationMetadata, MemoryStore};
-#[cfg(all(feature = "memory", feature = "postgres"))]
-pub use persistence::PostgresStore;
-#[cfg(feature = "memory")]
+pub use persistence::postgres::PostgresStore;
 pub use server::AgentManager;
 
 // Define the tool_fn macro directly in lib.rs to avoid module path issues

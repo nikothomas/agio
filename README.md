@@ -13,7 +13,6 @@ Agio provides a structured interface for interacting with OpenAI's API, with a f
 - **WebSocketClient**: Supports OpenAI's "Realtime" Beta API
 - **ToolRegistry**: Manages the tools available to the agent
 - **Config**: Provides configuration options for API requests
-- **Persistence**: Enables saving and loading conversation states with different storage backends
 
 ## Dependencies
 
@@ -336,7 +335,7 @@ fn token_utilities_example() -> Result<(), Error> {
 
 ## Persistence API
 
-Agio includes a persistence API that allows you to save and load agent conversation states, enabling long-running conversations to be resumed across sessions:
+Agio includes a comprehensive persistence API that allows you to save and load agent conversation states, enabling long-running conversations to be resumed across sessions or applications:
 
 ```rust
 use agio::{Agent, AgentBuilder, Config, Error};
@@ -383,6 +382,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### Built-in Storage Backends
+
+Agio provides two built-in storage backends:
+
+1. **MemoryStore**: An in-memory storage solution ideal for testing or short-lived applications. Conversations are lost when the application terminates.
+
+```rust
+let memory_store = MemoryStore::new();
+```
+
+2. **FileStore**: A file-based storage solution that persists conversations to disk, allowing them to be resumed across application restarts.
+
+```rust
+let file_store = FileStore::new(PathBuf::from("./conversations"));
+```
+
+### Conversation Management
+
+The persistence API provides several methods for managing conversations:
+
+- **save_conversation()**: Saves the current conversation state and returns a unique ID
+- **load_conversation(id)**: Loads a previously saved conversation by ID
+- **list_conversations()**: Returns a list of all saved conversations with metadata
+- **delete_conversation(id)**: Removes a saved conversation
+
 ### Custom Persistence Implementations
 
 You can implement your own persistence backend by implementing the `ConversationStore` trait:
@@ -415,6 +439,37 @@ impl ConversationStore for MyCustomStore {
     }
 }
 ```
+
+This allows you to create custom storage backends for databases, cloud storage, or other persistence mechanisms.
+
+### Conversation Metadata
+
+Each saved conversation includes metadata that can be used for filtering and organization:
+
+```rust
+for conversation in agent.list_conversations().await? {
+    println!("ID: {}", conversation.id);
+    println!("Created: {}", conversation.created_at);
+    println!("Last Updated: {}", conversation.updated_at);
+    println!("Message Count: {}", conversation.message_count);
+    println!("Model: {}", conversation.model);
+    // Access other metadata fields as needed
+}
+```
+
+### Automatic Conversation Management
+
+You can configure the agent to automatically save conversations after each interaction:
+
+```rust
+let mut agent = AgentBuilder::new()
+    .with_config(Config::new().with_api_key(api_key))
+    .with_persistence(FileStore::new(PathBuf::from("./conversations")))
+    .with_auto_save(true)  // Enable automatic saving
+    .build()?;
+```
+
+This ensures that conversation state is always persisted, even in case of unexpected application termination.
 
 ## Implementation Notes
 

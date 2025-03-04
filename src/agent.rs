@@ -9,7 +9,6 @@ use crate::error::OpenAIAgentError;
 use crate::models::{ChatMessage, ChatRequest, ChatResponse, ToolCall};
 use crate::tools::ToolRegistry;
 use crate::websocket_client::{WebSocketClient, RealtimeEvent, ServerEvent};
-#[cfg(feature = "memory")]
 use crate::persistence::{EntityId, PersistenceStore, generate_id};
 use std::sync::Arc;
 
@@ -62,11 +61,9 @@ pub struct Agent {
     websocket_client: Option<WebSocketClient>,
     
     /// Unique identifier for this agent instance
-    #[cfg(feature = "memory")]
     id: EntityId,
     
     /// Optional persistence store
-    #[cfg(feature = "memory")]
     persistence: Option<Arc<dyn PersistenceStore>>,
 }
 
@@ -82,17 +79,7 @@ impl Agent {
             messages: builder.messages,
             token_count: 0,
         };
-
-        #[cfg(not(feature = "memory"))]
-        let agent = Self {
-            client,
-            tools: builder.tools,
-            state,
-            max_turns: builder.max_turns,
-            websocket_client: builder.websocket_client,
-        };
-        
-        #[cfg(feature = "memory")]
+    
         let agent = Self {
             client,
             tools: builder.tools,
@@ -114,7 +101,7 @@ impl Agent {
         let result = self.run_internal(input).await?;
         
         // Optionally save state after each interaction
-        #[cfg(feature = "memory")]
+    
         if self.persistence.is_some() {
             self.save().await?;
         }
@@ -258,13 +245,13 @@ impl Agent {
     }
     
     /// Get the agent's unique identifier
-    #[cfg(feature = "memory")]
+
     pub fn id(&self) -> &str {
         &self.id
     }
     
     /// Save the current agent state to the persistence store
-    #[cfg(feature = "memory")]
+
     pub async fn save(&self) -> Result<(), OpenAIAgentError> {
         if let Some(store) = &self.persistence {
             store.store_conversation(&self.id, &self.state).await?;
@@ -273,7 +260,7 @@ impl Agent {
     }
     
     /// Load agent state from the persistence store
-    #[cfg(feature = "memory")]
+
     pub async fn load(&mut self) -> Result<bool, OpenAIAgentError> {
         if let Some(store) = &self.persistence {
             if let Some(state) = store.get_conversation(&self.id).await? {
@@ -285,7 +272,7 @@ impl Agent {
     }
     
     /// Delete agent data from the persistence store
-    #[cfg(feature = "memory")]
+
     pub async fn delete(&self) -> Result<(), OpenAIAgentError> {
         if let Some(store) = &self.persistence {
             store.delete_conversation(&self.id).await?;
@@ -372,27 +359,17 @@ pub struct AgentBuilder {
     pub(crate) websocket_client: Option<WebSocketClient>,
     
     /// Unique identifier for the agent
-    #[cfg(feature = "memory")]
+
     pub(crate) id: EntityId,
     
     /// Optional persistence store
-    #[cfg(feature = "memory")]
+
     pub(crate) persistence: Option<Arc<dyn PersistenceStore>>,
 }
 
 impl AgentBuilder {
     /// Creates a new AgentBuilder with default settings.
     pub fn new() -> Self {
-        #[cfg(not(feature = "memory"))]
-        let builder = Self {
-            config: None,
-            tools: Arc::new(ToolRegistry::new()),
-            messages: Vec::new(),
-            max_turns: 10,
-            websocket_client: None,
-        };
-        
-        #[cfg(feature = "memory")]
         let builder = Self {
             config: None,
             tools: Arc::new(ToolRegistry::new()),
@@ -437,14 +414,12 @@ impl AgentBuilder {
     }
     
     /// Set a specific ID for the agent
-    #[cfg(feature = "memory")]
     pub fn with_id(mut self, id: impl Into<String>) -> Self {
         self.id = id.into();
         self
     }
     
     /// Add persistence capabilities to the agent
-    #[cfg(feature = "memory")]
     pub fn with_persistence(mut self, store: Arc<dyn PersistenceStore>) -> Self {
         self.persistence = Some(store);
         self
@@ -465,7 +440,6 @@ impl AgentBuilder {
     }
     
     /// Build the agent, optionally loading state from persistence
-    #[cfg(feature = "memory")]
     pub async fn build_async(self) -> Result<Agent, OpenAIAgentError> {
         let mut agent = Agent::from_builder(self)?;
         

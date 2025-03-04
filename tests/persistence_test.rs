@@ -8,14 +8,11 @@ use tokio::runtime::Runtime;
 use agio::{
     AgentBuilder, Config, Error,
 };
-// Import persistence and server modules (these are feature-gated)
-#[cfg(feature = "memory")]
-use agio::persistence::{MemoryStore, PersistenceStore, ConversationMetadata};
-#[cfg(feature = "memory")]
+// Import persistence and server modules
+use agio::persistence::{MemoryStore, PersistenceStore, ConversationMetadata, PostgresStore};
 use agio::server::AgentManager;
 
 #[test]
-#[cfg(feature = "memory")]
 fn test_memory_persistence() -> Result<(), Box<dyn std::error::Error>> {
     // Get API key from environment
     let api_key = env::var("OPENAI_API_KEY")
@@ -85,7 +82,6 @@ fn test_memory_persistence() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-#[cfg(feature = "memory")]
 fn test_agent_manager() -> Result<(), Box<dyn std::error::Error>> {
     // Get API key from environment
     let api_key = env::var("OPENAI_API_KEY")
@@ -150,9 +146,7 @@ fn test_agent_manager() -> Result<(), Box<dyn std::error::Error>> {
     })
 }
 
-// This test requires both memory and postgres features
 #[test]
-#[cfg(feature = "postgres")]
 fn test_postgres_persistence() -> Result<(), Box<dyn std::error::Error>> {
     // Skip this test if DATABASE_URL is not set
     let db_url = match env::var("DATABASE_URL") {
@@ -172,8 +166,6 @@ fn test_postgres_persistence() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run the test
     rt.block_on(async {
-        use agio::persistence::PostgresStore;
-        
         // Create a PostgreSQL store
         let store = match PostgresStore::new(&db_url).await {
             Ok(store) => Arc::new(store),

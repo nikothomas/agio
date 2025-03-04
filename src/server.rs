@@ -3,23 +3,15 @@
 //! This module provides utilities for managing multiple agents in a server context,
 //! including caching, eviction, and database persistence.
 
-#[cfg(feature = "memory")]
 use crate::agent::{Agent, AgentBuilder};
-#[cfg(feature = "memory")]
 use crate::config::OpenAIConfig;
-#[cfg(feature = "memory")]
 use crate::error::OpenAIAgentError;
-#[cfg(feature = "memory")]
 use crate::persistence::{EntityId, PersistenceStore, ConversationMetadata};
-#[cfg(feature = "memory")]
 use std::collections::HashMap;
-#[cfg(feature = "memory")]
 use std::sync::Arc;
-#[cfg(feature = "memory")]
 use tokio::sync::RwLock;
 
 /// Server-side agent manager for handling multiple concurrent agents
-#[cfg(feature = "memory")]
 pub struct AgentManager {
     /// Default configuration for new agents
     config: OpenAIConfig,
@@ -34,7 +26,6 @@ pub struct AgentManager {
     max_cached_agents: usize,
 }
 
-#[cfg(feature = "memory")]
 impl AgentManager {
     /// Create a new agent manager
     pub fn new(config: OpenAIConfig, store: Arc<dyn PersistenceStore>, max_cached_agents: usize) -> Self {

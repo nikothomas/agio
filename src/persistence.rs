@@ -53,10 +53,8 @@ pub trait PersistenceStore: Send + Sync {
 
 // Re-export implementations
 pub mod memory;
-#[cfg(feature = "postgres")]
 pub mod postgres;
 
 // Re-export implementations for easier access
 pub use memory::MemoryStore;
-#[cfg(feature = "postgres")]
 pub use postgres::PostgresStore; 
