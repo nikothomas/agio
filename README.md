@@ -13,6 +13,7 @@ Agio provides a structured interface for interacting with OpenAI's API, with a f
 - **WebSocketClient**: Supports OpenAI's "Realtime" Beta API
 - **ToolRegistry**: Manages the tools available to the agent
 - **Config**: Provides configuration options for API requests
+- **Persistence**: Enables saving and loading conversation states with different storage backends
 
 ## Dependencies
 
@@ -330,6 +331,88 @@ fn token_utilities_example() -> Result<(), Error> {
     println!("Truncated text: {}", truncated);
     
     Ok(())
+}
+```
+
+## Persistence API
+
+Agio includes a persistence API that allows you to save and load agent conversation states, enabling long-running conversations to be resumed across sessions:
+
+```rust
+use agio::{Agent, AgentBuilder, Config, Error};
+use agio::persistence::{MemoryStore, FileStore, ConversationStore};
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let api_key = std::env::var("OPENAI_API_KEY").expect("Missing API key");
+    
+    // Example 1: Using in-memory storage (for testing or short-lived applications)
+    let memory_store = MemoryStore::new();
+    
+    let mut agent = AgentBuilder::new()
+        .with_config(Config::new().with_api_key(api_key.clone()))
+        .with_persistence(memory_store)
+        .build()?;
+    
+    // Example 2: Using file-based storage (for persistent conversations)
+    let file_store = FileStore::new(PathBuf::from("./conversations"));
+    
+    let mut persistent_agent = AgentBuilder::new()
+        .with_config(Config::new().with_api_key(api_key))
+        .with_persistence(file_store)
+        .build()?;
+    
+    // Save the current conversation state
+    let conversation_id = persistent_agent.save_conversation().await?;
+    println!("Saved conversation with ID: {}", conversation_id);
+    
+    // Load a previously saved conversation
+    persistent_agent.load_conversation(&conversation_id).await?;
+    
+    // List all saved conversations
+    let conversations = persistent_agent.list_conversations().await?;
+    for conv in conversations {
+        println!("Conversation ID: {}, Created: {}", conv.id, conv.created_at);
+    }
+    
+    // Delete a conversation
+    persistent_agent.delete_conversation(&conversation_id).await?;
+    
+    Ok(())
+}
+```
+
+### Custom Persistence Implementations
+
+You can implement your own persistence backend by implementing the `ConversationStore` trait:
+
+```rust
+use agio::persistence::{ConversationStore, Conversation, Error as PersistenceError};
+use async_trait::async_trait;
+
+struct MyCustomStore {
+    // Your storage implementation details
+}
+
+#[async_trait]
+impl ConversationStore for MyCustomStore {
+    async fn save(&self, conversation: &Conversation) -> Result<String, PersistenceError> {
+        // Implement saving logic
+        // Return the conversation ID
+    }
+    
+    async fn load(&self, id: &str) -> Result<Conversation, PersistenceError> {
+        // Implement loading logic
+    }
+    
+    async fn delete(&self, id: &str) -> Result<(), PersistenceError> {
+        // Implement deletion logic
+    }
+    
+    async fn list(&self) -> Result<Vec<Conversation>, PersistenceError> {
+        // Implement listing logic
+    }
 }
 ```
 

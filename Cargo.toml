@@ -1,6 +1,6 @@
 [package]
 name = "agio"
-version = "0.0.1-alpha"
+version = "0.0.1-beta"
 edition = "2024"
 authors = ["Nikolas Yanek-Chrones research@icarai.io"]
 description = "A Rust crate for configuring and using OpenAI in an agentic system"
@@ -35,8 +35,13 @@ async-trait = "0.1"
 # Error handling
 thiserror = "2.0.11"
 
+# Schema generation
 schemars = "1.0.0-alpha.17"
-uuid = { version = "1.15.1", features = ["v4"] }
+
+# UUID generation
+uuid = { version = "1.15.1", features = ["v4", "serde"] }
+
+# WebSocket support
 futures = "0.3.31"
 futures-util = "0.3.31"
 tokio-tungstenite = { version = "0.26.2", features = ["rustls-tls-webpki-roots"] }
@@ -46,11 +51,23 @@ rustls = { version = "0.23.23", features = ["ring"] }
 rand = "0.9.0"
 base64 = "0.22.1"
 
+# Database support
+sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "chrono", "json", "uuid"], optional = true }
+chrono = { version = "0.4", features = ["serde"] }
+
 [dev-dependencies]
 # Testing
 mockito = "1.1"
+# Web server for examples
+axum = "0.7"
 
 [features]
 default = []
 experimental = []
 memory = []
+postgres = ["sqlx"]
+testing = ["memory", "sqlx", "postgres"]
+
+[[example]]
+name = "web_server"
+required-features = ["memory"]
