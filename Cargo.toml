@@ -52,14 +52,14 @@ rand = "0.9.0"
 base64 = "0.22.1"
 
 # Database support
-sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "chrono", "json", "uuid"] }
+sqlx = { version = "0.8.3", features = ["runtime-tokio", "postgres", "chrono", "json", "uuid"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
 # Testing
-mockito = "1.1"
+mockito = "1.6.1"
 # Web server for examples
-axum = "0.7"
+axum = "0.8.1"
 
 [[example]]
 name = "web_server"
