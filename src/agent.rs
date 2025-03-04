@@ -16,10 +16,10 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct AgentState {
     /// Conversation history including all messages exchanged
-    pub(crate) messages: Vec<ChatMessage>,
+    pub messages: Vec<ChatMessage>,
 
     /// Running count of tokens used in the conversation
-    pub(crate) token_count: usize,
+    pub token_count: usize,
 }
 
 impl AgentState {
@@ -404,6 +404,12 @@ impl AgentBuilder {
     /// Adds a message to the initial conversation.
     pub fn with_message(mut self, message: ChatMessage) -> Self {
         self.messages.push(message);
+        self
+    }
+
+    /// Adds multiple messages to the initial conversation.
+    pub fn with_messages(mut self, messages: impl IntoIterator<Item = ChatMessage>) -> Self {
+        self.messages.extend(messages);
         self
     }
 

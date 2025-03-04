@@ -12,7 +12,7 @@ use std::collections::HashMap;
 /// Messages form the core of chat interactions with OpenAI models. Each message
 /// has a role, optional content, and may include tool calls for agent functionality.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ChatMessage {
+pub struct ChatMessage {
     /// Role of the message sender (system, user, assistant, or tool)
     pub role: String,
 
@@ -136,7 +136,7 @@ pub(crate) struct ToolSpec {
 /// Contains the name of the function to call and its arguments as a JSON string.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(Default)]
-pub(crate) struct FunctionCall {
+pub struct FunctionCall {
     /// Name of the function to call
     #[serde(default)]
     pub name: String,
@@ -151,7 +151,7 @@ pub(crate) struct FunctionCall {
 /// This struct represents the model's request to execute a tool,
 /// including the tool name and arguments.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ToolCall {
+pub struct ToolCall {
     /// Unique identifier for this tool call
     #[serde(default)]
     pub id: String,
