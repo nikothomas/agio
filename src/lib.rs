@@ -33,7 +33,6 @@ mod agent;
 mod config;
 mod client;
 mod error;
-mod models;
 mod utils;
 mod tools;
 pub mod websocket_client;
@@ -41,6 +40,7 @@ pub mod websocket_client;
 // Persistence and server modules
 pub mod persistence;
 pub mod server;
+pub mod models;
 
 // Public exports for the prelude
 pub mod prelude {
