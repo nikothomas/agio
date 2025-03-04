@@ -1,6 +1,6 @@
 [package]
 name = "agio"
-version = "0.0.1-beta"
+version = "0.0.1-prerelease"
 edition = "2024"
 authors = ["Nikolas Yanek-Chrones research@icarai.io"]
 description = "A Rust crate for configuring and using OpenAI in an agentic system"
