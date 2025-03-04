@@ -1,0 +1,51 @@
+[package]
+name = "agio"
+version = "0.0.1-alpha"
+edition = "2024"
+authors = ["Nikolas Yanek-Chrones research@icarai.io"]
+description = "A Rust crate for configuring and using OpenAI in an agentic system"
+license = "MIT"
+repository = "https://github.com/yourusername/openai_agent"
+keywords = ["openai", "ai", "agent", "llm", "gpt"]
+categories = ["api-bindings", "asynchronous"]
+
+[dependencies]
+# HTTP client
+reqwest = { version = "0.12", features = ["json"] }
+
+# Async runtime
+tokio = { version = "1.28", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+humantime-serde = "1.1"
+
+# Token counting for OpenAI models
+tiktoken-rs = "0.6.0"
+
+# Async traits
+async-trait = "0.1"
+
+# Error handling
+thiserror = "2.0.11"
+
+schemars = "1.0.0-alpha.17"
+uuid = { version = "1.15.1", features = ["v4"] }
+futures = "0.3.31"
+futures-util = "0.3.31"
+tokio-tungstenite = { version = "0.26.2", features = ["rustls-tls-webpki-roots"] }
+url = "2.5.4"
+http = "1.2.0"
+rustls = { version = "0.23.23", features = ["ring"] }
+rand = "0.9.0"
+base64 = "0.21.7"
+
+[dev-dependencies]
+# Testing
+mockito = "1.1"
+
+[features]
+default = []
+experimental = []
+memory = []
