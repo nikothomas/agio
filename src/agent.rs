@@ -1,7 +1,7 @@
 //! agent.rs
 //!
 //! Agent module for managing conversational interactions with OpenAI models
-//! via both HTTP and (optionally) WebSocket “Realtime” Beta.
+//! via both HTTP and (optionally) WebSocket "Realtime" Beta.
 
 use crate::client::OpenAIClient;
 use crate::config::OpenAIConfig;
@@ -9,6 +9,7 @@ use crate::error::OpenAIAgentError;
 use crate::models::{ChatMessage, ChatRequest, ChatResponse, ToolCall};
 use crate::tools::ToolRegistry;
 use crate::websocket_client::{WebSocketClient, RealtimeEvent, ServerEvent};
+use crate::persistence::{EntityId, PersistenceStore, generate_id};
 use std::sync::Arc;
 
 /// The current state of the agent, including conversation history and token usage.
@@ -42,7 +43,7 @@ impl AgentState {
 ///
 /// The agent handles the conversation flow, including sending requests to the API,
 /// processing responses, and optionally executing tool calls when the model requests them.
-/// It can also connect to the (hypothetical) OpenAI “Realtime” Beta API over WebSockets.
+/// It can also connect to the (hypothetical) OpenAI "Realtime" Beta API over WebSockets.
 pub struct Agent {
     /// OpenAI client for making normal HTTP API requests
     client: OpenAIClient,
@@ -56,8 +57,14 @@ pub struct Agent {
     /// Maximum number of turns before terminating to prevent infinite loops
     max_turns: usize,
 
-    /// Optional WebSocket client for the OpenAI “Realtime” Beta API
+    /// Optional WebSocket client for the OpenAI "Realtime" Beta API
     websocket_client: Option<WebSocketClient>,
+    
+    /// Unique identifier for this agent instance
+    id: EntityId,
+    
+    /// Optional persistence store
+    persistence: Option<Arc<dyn PersistenceStore>>,
 }
 
 impl Agent {
@@ -72,23 +79,38 @@ impl Agent {
             messages: builder.messages,
             token_count: 0,
         };
-
-        Ok(Self {
+    
+        let agent = Self {
             client,
             tools: builder.tools,
             state,
             max_turns: builder.max_turns,
-
-            // Carry over the websocket client (if any) from the builder
             websocket_client: builder.websocket_client,
-        })
+            id: builder.id,
+            persistence: builder.persistence,
+        };
+
+        Ok(agent)
     }
 
     /// Primary entry point for user → agent → OpenAI conversation using HTTP-based chat completions.
     ///
-    /// If you plan to use the WebSocket “Realtime” approach, you might either
+    /// If you plan to use the WebSocket "Realtime" approach, you might either
     /// not use this method or adapt it to handle real-time streaming directly.
     pub async fn run(&mut self, input: impl Into<String>) -> Result<String, OpenAIAgentError> {
+        let result = self.run_internal(input).await?;
+        
+        // Optionally save state after each interaction
+    
+        if self.persistence.is_some() {
+            self.save().await?;
+        }
+        
+        Ok(result)
+    }
+    
+    /// Internal implementation of run that doesn't save state
+    async fn run_internal(&mut self, input: impl Into<String>) -> Result<String, OpenAIAgentError> {
         self.state.messages.push(ChatMessage::user(input.into()));
 
         let mut turns = 0;
@@ -136,11 +158,10 @@ impl Agent {
                 return Err(OpenAIAgentError::Parse(
                     format!("Assistant returned empty message with finish_reason: {}", choice.finish_reason),
                 ));
-            } else {
-                return Err(OpenAIAgentError::Parse(
-                    "No response choices received".to_string(),
-                ));
             }
+            return Err(OpenAIAgentError::Parse(
+                "No response choices received".to_string(),
+            ));
         }
 
         Err(OpenAIAgentError::Agent(format!(
@@ -222,12 +243,48 @@ impl Agent {
     pub fn push_assistant_message(&mut self, content: impl Into<String>) {
         self.state.messages.push(ChatMessage::assistant(content.into()));
     }
+    
+    /// Get the agent's unique identifier
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+    
+    /// Save the current agent state to the persistence store
+
+    pub async fn save(&self) -> Result<(), OpenAIAgentError> {
+        if let Some(store) = &self.persistence {
+            store.store_conversation(&self.id, &self.state).await?;
+        }
+        Ok(())
+    }
+    
+    /// Load agent state from the persistence store
+
+    pub async fn load(&mut self) -> Result<bool, OpenAIAgentError> {
+        if let Some(store) = &self.persistence {
+            if let Some(state) = store.get_conversation(&self.id).await? {
+                self.state = state;
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+    
+    /// Delete agent data from the persistence store
+
+    pub async fn delete(&self) -> Result<(), OpenAIAgentError> {
+        if let Some(store) = &self.persistence {
+            store.delete_conversation(&self.id).await?;
+        }
+        Ok(())
+    }
 
     // ------------------------------------------------------------------------
-    // Below are the NEW methods enabling WebSocket usage (“Realtime” Beta)
+    // Below are the NEW methods enabling WebSocket usage ("Realtime" Beta)
     // ------------------------------------------------------------------------
 
-    /// Connect to the “Realtime” WebSocket API, specifying which model to use.
+    /// Connect to the "Realtime" WebSocket API, specifying which model to use.
     pub async fn connect_realtime(&mut self, model_name: &str) -> Result<(), OpenAIAgentError> {
         let ws_client = self
             .websocket_client
@@ -300,18 +357,30 @@ pub struct AgentBuilder {
 
     /// Optional WebSocket client for the Realtime Beta
     pub(crate) websocket_client: Option<WebSocketClient>,
+    
+    /// Unique identifier for the agent
+
+    pub(crate) id: EntityId,
+    
+    /// Optional persistence store
+
+    pub(crate) persistence: Option<Arc<dyn PersistenceStore>>,
 }
 
 impl AgentBuilder {
     /// Creates a new AgentBuilder with default settings.
     pub fn new() -> Self {
-        Self {
+        let builder = Self {
             config: None,
             tools: Arc::new(ToolRegistry::new()),
             messages: Vec::new(),
             max_turns: 10,
             websocket_client: None,
-        }
+            id: generate_id(),
+            persistence: None,
+        };
+        
+        builder
     }
 
     /// Sets the OpenAI configuration.
@@ -343,6 +412,18 @@ impl AgentBuilder {
         self.max_turns = max_turns;
         self
     }
+    
+    /// Set a specific ID for the agent
+    pub fn with_id(mut self, id: impl Into<String>) -> Self {
+        self.id = id.into();
+        self
+    }
+    
+    /// Add persistence capabilities to the agent
+    pub fn with_persistence(mut self, store: Arc<dyn PersistenceStore>) -> Self {
+        self.persistence = Some(store);
+        self
+    }
 
     /// Instantiates a WebSocketClient for Realtime usage, storing it in this builder.
     /// This does NOT immediately connect; call `agent.connect_realtime(...)` after build.
@@ -356,6 +437,18 @@ impl AgentBuilder {
     /// Builds the Agent from the current configuration.
     pub fn build(self) -> Result<Agent, OpenAIAgentError> {
         Agent::from_builder(self)
+    }
+    
+    /// Build the agent, optionally loading state from persistence
+    pub async fn build_async(self) -> Result<Agent, OpenAIAgentError> {
+        let mut agent = Agent::from_builder(self)?;
+        
+        // If persistence is configured, try to load existing state
+        if agent.persistence.is_some() {
+            let _ = agent.load().await?; // Ignore if no state exists yet
+        }
+        
+        Ok(agent)
     }
 }
 

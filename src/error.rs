@@ -42,4 +42,16 @@ pub enum OpenAIAgentError {
     /// IO error from standard library
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    
+    /// Database error
+    #[error("Database error: {0}")]
+    Database(String),
+    
+    /// Deserialization error
+    #[error("Deserialization error: {0}")]
+    Deserialization(String),
+    
+    /// Persistence error
+    #[error("Persistence error: {0}")]
+    Persistence(String),
 }

@@ -333,6 +333,144 @@ fn token_utilities_example() -> Result<(), Error> {
 }
 ```
 
+## Persistence API
+
+Agio includes a comprehensive persistence API that allows you to save and load agent conversation states, enabling long-running conversations to be resumed across sessions or applications:
+
+```rust
+use agio::{Agent, AgentBuilder, Config, Error};
+use agio::persistence::{MemoryStore, FileStore, ConversationStore};
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let api_key = std::env::var("OPENAI_API_KEY").expect("Missing API key");
+    
+    // Example 1: Using in-memory storage (for testing or short-lived applications)
+    let memory_store = MemoryStore::new();
+    
+    let mut agent = AgentBuilder::new()
+        .with_config(Config::new().with_api_key(api_key.clone()))
+        .with_persistence(memory_store)
+        .build()?;
+    
+    // Example 2: Using file-based storage (for persistent conversations)
+    let file_store = FileStore::new(PathBuf::from("./conversations"));
+    
+    let mut persistent_agent = AgentBuilder::new()
+        .with_config(Config::new().with_api_key(api_key))
+        .with_persistence(file_store)
+        .build()?;
+    
+    // Save the current conversation state
+    let conversation_id = persistent_agent.save_conversation().await?;
+    println!("Saved conversation with ID: {}", conversation_id);
+    
+    // Load a previously saved conversation
+    persistent_agent.load_conversation(&conversation_id).await?;
+    
+    // List all saved conversations
+    let conversations = persistent_agent.list_conversations().await?;
+    for conv in conversations {
+        println!("Conversation ID: {}, Created: {}", conv.id, conv.created_at);
+    }
+    
+    // Delete a conversation
+    persistent_agent.delete_conversation(&conversation_id).await?;
+    
+    Ok(())
+}
+```
+
+### Built-in Storage Backends
+
+Agio provides two built-in storage backends:
+
+1. **MemoryStore**: An in-memory storage solution ideal for testing or short-lived applications. Conversations are lost when the application terminates.
+
+```rust
+let memory_store = MemoryStore::new();
+```
+
+2. **FileStore**: A file-based storage solution that persists conversations to disk, allowing them to be resumed across application restarts.
+
+```rust
+let file_store = FileStore::new(PathBuf::from("./conversations"));
+```
+
+### Conversation Management
+
+The persistence API provides several methods for managing conversations:
+
+- **save_conversation()**: Saves the current conversation state and returns a unique ID
+- **load_conversation(id)**: Loads a previously saved conversation by ID
+- **list_conversations()**: Returns a list of all saved conversations with metadata
+- **delete_conversation(id)**: Removes a saved conversation
+
+### Custom Persistence Implementations
+
+You can implement your own persistence backend by implementing the `ConversationStore` trait:
+
+```rust
+use agio::persistence::{ConversationStore, Conversation, Error as PersistenceError};
+use async_trait::async_trait;
+
+struct MyCustomStore {
+    // Your storage implementation details
+}
+
+#[async_trait]
+impl ConversationStore for MyCustomStore {
+    async fn save(&self, conversation: &Conversation) -> Result<String, PersistenceError> {
+        // Implement saving logic
+        // Return the conversation ID
+    }
+    
+    async fn load(&self, id: &str) -> Result<Conversation, PersistenceError> {
+        // Implement loading logic
+    }
+    
+    async fn delete(&self, id: &str) -> Result<(), PersistenceError> {
+        // Implement deletion logic
+    }
+    
+    async fn list(&self) -> Result<Vec<Conversation>, PersistenceError> {
+        // Implement listing logic
+    }
+}
+```
+
+This allows you to create custom storage backends for databases, cloud storage, or other persistence mechanisms.
+
+### Conversation Metadata
+
+Each saved conversation includes metadata that can be used for filtering and organization:
+
+```rust
+for conversation in agent.list_conversations().await? {
+    println!("ID: {}", conversation.id);
+    println!("Created: {}", conversation.created_at);
+    println!("Last Updated: {}", conversation.updated_at);
+    println!("Message Count: {}", conversation.message_count);
+    println!("Model: {}", conversation.model);
+    // Access other metadata fields as needed
+}
+```
+
+### Automatic Conversation Management
+
+You can configure the agent to automatically save conversations after each interaction:
+
+```rust
+let mut agent = AgentBuilder::new()
+    .with_config(Config::new().with_api_key(api_key))
+    .with_persistence(FileStore::new(PathBuf::from("./conversations")))
+    .with_auto_save(true)  // Enable automatic saving
+    .build()?;
+```
+
+This ensures that conversation state is always persisted, even in case of unexpected application termination.
+
 ## Implementation Notes
 
 - There's built-in retry logic for transient API failures.

@@ -38,6 +38,10 @@ mod utils;
 mod tools;
 pub mod websocket_client;
 
+// Persistence and server modules
+pub mod persistence;
+pub mod server;
+
 // Public exports for the prelude
 pub mod prelude {
     //! Commonly used types and traits
@@ -49,6 +53,13 @@ pub mod prelude {
     pub use crate::config::OpenAIConfig as Config;
     pub use crate::error::OpenAIAgentError as Error;
     pub use crate::tools::{ToolRegistry, RegisteredTool};
+    
+    // Re-export persistence types
+    pub use crate::persistence::{PersistenceStore, EntityId, ConversationMetadata, MemoryStore};
+    pub use crate::persistence::postgres::PostgresStore;
+    
+    // Re-export server types
+    pub use crate::server::AgentManager;
 }
 
 // Direct exports for the main API surface
@@ -63,6 +74,11 @@ pub use crate::tools::FunctionTool;
 // Selective re-exports of internal types that are needed in public APIs
 // but should not be directly constructed by users
 pub use agent::AgentState;
+
+// Explicitly re-export persistence and server modules
+pub use persistence::{PersistenceStore, EntityId, ConversationMetadata, MemoryStore};
+pub use persistence::postgres::PostgresStore;
+pub use server::AgentManager;
 
 // Define the tool_fn macro directly in lib.rs to avoid module path issues
 /// Creates a tool from a function.
